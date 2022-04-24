@@ -1,0 +1,186 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="
+           http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+	 <!-- <context:annotation-config/> -->
+    <!-- <context:component-scan base-package="com.spring"/> -->
+    
+    <context:property-placeholder location="classpath:oracle.properties"/>
+     <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="oracle.jdbc.OracleDriver" />
+        <property name="url" value="${db.url}" />
+        <property name="username" value="${db.username}" />
+        <property name="password" value="${db.password}" />
+    </bean>
+
+    
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+    <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+    <bean id="ownerDAO" class="com.spring.dao.OwnerDAO">
+     <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+</beans>
+
+
+
+------------------------------------------
+
+
+
+import java.util.*;
+import com.spring.entity.*;
+import com.spring.dao.*;
+import java.util.List;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+public class Main {
+
+    public static void main(String[] args) {
+		Logger log = Logger.getLogger("org.hibernate");
+		log.setLevel(Level.OFF);
+		System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
+		
+		ApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+		OwnerDAO obj = (OwnerDAO) context.getBean("ownerDAO", OwnerDAO.class);
+		//obj.setDataSource(obj.getDataSource());
+
+		Scanner sc = new Scanner(System.in);
+		System.out.println("... Owner List ...");
+		 System.out.printf("%-15s %-15s %-15s %s\n","Id","Name","Email","Mobile");
+		
+		//int cnt=1;
+		 List<Owner> fnl = obj.getAllOwners();
+		 for(Owner o : fnl){
+			 System.out.printf("%-15s %-15s %-15s %s\n",o.getId(),o.getName(),o.getEmailId(),o.getMobileNumber()); 
+			
+		 }
+
+		 //cnt=0;
+
+		 System.out.println("Enter the id you want to update");
+		 int choice=Integer.parseInt(sc.nextLine());
+
+		if(obj.getOwnerById(choice) == null){
+			System.out.println("No such owner");
+		}
+
+		 else{
+			 System.out.println("Enter the mobile number and email id");
+		String mob=sc.nextLine();
+		String email=sc.nextLine();
+
+		obj.update(choice, mob, email);
+
+         System.out.println("updated successfully");
+		 System.out.println("... Owner List ...");
+		System.out.printf("%-15s %-15s %-15s %s\n","Id","Name","Email","Mobile");
+		
+		//int cnt=1;
+		fnl = obj.getAllOwners();
+		 for(Owner o : fnl){
+			 System.out.printf("%-15s %-15s %-15s %s\n",o.getId(),o.getName(),o.getEmailId(),o.getMobileNumber()); 
+		 }
+
+		
+			
+		 }
+		
+	}
+
+}
+
+
+
+
+
+
+----------------------------------------------------
+
+
+
+
+
+package com.spring.dao;
+
+import com.spring.entity.*;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
+import com.spring.dao.OwnerMapper;
+import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Component;
+
+
+public class OwnerDAO {
+ @Autowired
+    private DataSource datasource;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    public DataSource getDataSource()
+    {
+        return datasource;
+    }
+    public void setDataSource(DataSource dataSource)
+    {
+        this.jdbcTemplate= new JdbcTemplate(dataSource);
+    }
+
+	public List<Owner> getAllOwners(){
+		String sql = "select * from owner";
+
+      return this.jdbcTemplate.query(sql, new OwnerMapper());
+		
+	}
+	
+	public String getOwnerById(int id) {
+		String sql = "select * from owner where id=?";
+      
+      try{
+          Owner o = this.jdbcTemplate.queryForObject(sql, new OwnerMapper(), id);
+
+      return o.getName();
+      }
+
+      catch(Exception e){
+          return null;
+      }
+      
+		
+	}
+	public void update(int id, String mobile, String email){
+      String sql = "update owner set mobile_number = ? , email_id = ? where id = ?";
+      this.jdbcTemplate.update(sql, mobile,email,id);
+	}
+}
+class OwnerMapper implements RowMapper<Owner>{
+	public Owner mapRow(ResultSet rs, int rowNum) throws SQLException{
+		Owner user = new Owner();
+		user.setId(rs.getInt("id"));
+		user.setName(rs.getString("name"));
+      user.setPassword(rs.getString("password"));
+      user.setEmailId(rs.getString("email_id"));
+      user.setMobileNumber(rs.getString("mobile_number"));
+
+      return user;
+	}
+}
+
+
