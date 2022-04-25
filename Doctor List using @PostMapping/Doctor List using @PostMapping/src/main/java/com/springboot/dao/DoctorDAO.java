@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import com.springboot.domain.Doctor;
 
 @Component
-public class DoctorDAO {
+public class AppApplication {
 
 	static ArrayList<Doctor> doctorList = new ArrayList<Doctor>();
 
